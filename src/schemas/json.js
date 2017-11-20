@@ -149,35 +149,46 @@ function processObject(object, output, nested) {
 
     type = type === 'undefined' ? 'null' : type
 
-    if (type === 'object') {
-      output.properties[key] = processObject(value, output.properties[key])
-      continue
-    }
-
-    if (type === 'array') {
-      output.properties[key] = processArray(value, output.properties[key])
-      continue
-    }
-
     if (output.properties[key]) {
       var entry = output.properties[key]
-      var hasTypeArray = Array.isArray(entry.type)
+      var types = entry.type.slice(0);
+      var hasTypeArray = Array.isArray(types)
+
+      if (type === 'object') {
+        output.properties[key] = processObject(value, output.properties[key])
+        entry.type = types
+      } else if (type === 'array') {
+        output.properties[key] = processArray(value, output.properties[key])
+        entry.type = types
+      }
 
       // When an array already exists, we check the existing
       // type array to see if it contains our current property
       // type, if not, we add it to the array and continue
-      if (hasTypeArray && entry.type.indexOf(type) < 0) {
-        entry.type.push(type)
+      if (hasTypeArray && types.indexOf(type) < 0) {
+        types.push(type)
+        entry.type = types
       }
 
       // When multiple fields of differing types occur,
       // json schema states that the field must specify the
       // primitive types the field allows in array format.
-      if (!hasTypeArray && entry.type !== type) {
-        entry.type = [entry.type, type]
+      if (!hasTypeArray && types !== type) {
+        types = [types, type]
+        entry.type = types
       }
 
       continue
+    } else {
+      if (type === 'object') {
+        output.properties[key] = processObject(value, output.properties[key])
+        continue
+      }
+
+      if (type === 'array') {
+        output.properties[key] = processArray(value, output.properties[key])
+        continue
+      }
     }
 
     output.properties[key] = {}
